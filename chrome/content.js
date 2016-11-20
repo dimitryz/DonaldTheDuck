@@ -28,8 +28,8 @@ var replaceText = function (node) {
     if (node.nodeName == "#text") {
         var replaced = false;
         
-        while (node.nodeValue.match(/Trump/)) {
-            node.nodeValue = node.nodeValue.replace(/(J\.\s+)?Trump/, "Duck");
+        while (node.nodeValue.match(/Trump|-\s*DJT/)) {
+            node.nodeValue = node.nodeValue.replace(/(J\.\s+)?Trump/, "Duck").replace(/-\s*DJT/, "- Duck");
             replaced = true;
         }
 
