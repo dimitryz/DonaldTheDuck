@@ -1,4 +1,4 @@
-/// Function iterates over all children of el and replaces instances of Donald Trump with Donald Duck
+/// Function iterates over all children of node and replaces instances of Trump with Duck
 var replaceText = function (node) {
     if (node.nodeName == "#text") {
         if (node.nodeValue.match(/Trump/)) {
@@ -12,9 +12,9 @@ var replaceText = function (node) {
 }
 
 /// Triggers the pattern replacement when document is ready
-var tid = setInterval( function () {
-    if ( document.readyState !== 'complete' ) return;
-    clearInterval( tid );       
+var tid = setInterval(function () {
+    if (document.readyState !== 'complete') return;
+    clearInterval(tid);       
     
     replaceText(document);
-}, 100 );
+}, 100);
