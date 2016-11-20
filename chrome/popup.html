@@ -18,7 +18,30 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
 
 -->
 <html>
+    <head>
+        <title>DonaldTheDuck Extension Settings</title>
+        <style type="text/css">
+            body { margin: 0; color: #333; }
+            #c { width: 200px; padding: 24px 12px 12px 12px; }
+            h1 { padding: 0; margin: 0 0 12px 0; font-size: 18px; }
+            label { font-size: 12px; cursor: pointer; display: block; padding: 6px; background: #eaeaea; }
+            label span { display: inline-block; height: 20px; line-height: 20px; }
+            label input { float: right; height: 14px; }
+            label:hover { background: #eee; }
+            p.footer { text-align: center; color: #ccc; margin: 12px 0 12px 0; }
+            p.footer a { color: #ccc; }
+        </style>
+    </head>
     <body>
-        <h1>Donald Duck!</h1>
+        <div id="c">
+            <h1>Donald the Duck</h1>
+            <p>Replaces all references to Donald Trump with Donald Duck</p> 
+            <label><span>Disabled</span> <input id="iDisabled" name="disabled" disabled="disabled" type="checkbox" /></label>
+            <p class="footer">
+                <a target="_blank" href="https://github.com/dimitryz/DonaldTheDuck">Source</a>
+                &copy; GPLv3
+            </p>
+        </div>
+        <script src="popup.js"></script>
     </body>
 </html>

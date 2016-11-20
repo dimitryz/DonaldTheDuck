@@ -18,7 +18,7 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
 */
 
 /// Number of nodes to traverse up the tree to find related images
-var BUBBLE_UP_IMAGE_SEARCH = 4;
+var BUBBLE_UP_IMAGE_SEARCH = 3;
 
 /// The attribute assigned to an image to say it was visited by the replaceImage function
 var VISITED_IMAGE_ATTR = "data-donalded";
@@ -183,19 +183,11 @@ var monitorForChanges = function (node) {
     return observer;
 }
 
-/// Triggers the pattern replacement when document is ready
-var tid = setInterval(function () {
-    if (document.readyState !== 'complete') return;
-    clearInterval(tid);    
+// replaces all text
+replaceText(document);
 
-    console.log("Donald Duck initialized.");   
-    
-    // replaces all text
-    replaceText(document);
-    
-    // replaces all images but only those whose meta matches terms suggesting trump
-    replaceImages(document.body, false);
+// replaces all images but only those whose meta matches terms suggesting trump
+replaceImages(document.body, false);
 
-    // monitors the body for future changes to the tree
-    monitorForChanges(document.body);
-}, 100);
+// monitors the body for future changes to the tree
+monitorForChanges(document.body);
