@@ -17,11 +17,30 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
 
 */
 
+/// Number of nodes to traverse up the tree to find related images
+var BUBBLE_UP_IMAGE_SEARCH = 3;
+
+/// The attribute assigned to an image to say it was visited by the replaceImage function
+var VISITED_IMAGE_ATTR = "data-donalded";
+
 /// Function iterates over all children of node and replaces instances of Trump with Duck
 var replaceText = function (node) {
     if (node.nodeName == "#text") {
+        var replaced = false;
+        
         while (node.nodeValue.match(/Trump/)) {
             node.nodeValue = node.nodeValue.replace(/(J\.\s+)?Trump/, "Duck");
+            replaced = true;
+        }
+
+        if (replaced) {
+            var levelsToGoUp = BUBBLE_UP_IMAGE_SEARCH;
+            var targetNode   = node;
+            while (levelsToGoUp > 0 && targetNode.parentNode && targetNode.parentNode != document) {
+                targetNode = targetNode.parentNode;
+                levelsToGoUp -= 1;
+            }
+            replaceImages(targetNode, true);
         }
     } else {
         for (var i = 0; i < node.childNodes.length; i++) {
@@ -33,6 +52,74 @@ var replaceText = function (node) {
         //     replaceText(n);
         // });
     }
+}
+
+/**
+ * Replaces all images under the given node with images of Donald Duck.
+ * 
+ * Setting true on the `ignoreMeta` will replace all images of a certain size.
+ * Otherwise, the script will only replace images that include the words Trump,
+ * J. Trump or DJT_ in either the source or alt attributes.
+ * 
+ * @param DOMNode node The node at which to start the search
+ * @param boolean ignoreMeta Will not search through the meta for terms related to Trump
+ */
+var replaceImages = function (node, ignoreMeta) {
+    var replaceImage = function (image) {
+        if ((ignoreMeta && imageResemblesPhoto(image)) || imageContainsTrump(image)) {
+            image.setAttribute("src", "");
+        }
+    }
+
+    var images;
+    if (node.nodeName == "IMG") {
+        images = [node];
+    } else {
+        images = Array.prototype.slice.call(node.getElementsByTagName("img"));
+    }
+
+    images.forEach(function (image) {
+        if (image.getAttribute(VISITED_IMAGE_ATTR)) {
+            return;
+        }
+        
+        image.setAttribute(VISITED_IMAGE_ATTR, "1");
+
+        if (image.complete) {
+            replaceImage(image);
+        } else {
+            image.addEventListener("load", function (e) {
+                replaceImage(e.target);
+            });
+        }
+    });
+}
+
+/**
+ * Returns true if the image appears to be of Trump.
+ * 
+ * @param DOMNode node An image node
+ * @return boolean True if there is a mention of trump
+ */
+var imageContainsTrump = function (node) {
+    var contains = false;
+    var lookThrough = [node.getAttribute("src"), node.getAttribute("alt")];
+    for (var i = 0; i < lookThrough.length && !contains; i++) {
+        if (lookThrough[i] && lookThrough[i].match('/Trump|DJT_/')) {
+            contains = true;
+        }
+    }
+    return contains;
+}
+
+/**
+ * Returns true if the given image matches the size of a photo.
+ * 
+ * @param DOMNode node Checks that the image is of a certain size
+ * @return boolean True if the image is a photo
+ */
+var imageResemblesPhoto = function (node) {
+    return node.width && node.height && node.width >= node.height && node.width > 45; 
 }
 
 /**
@@ -60,6 +147,12 @@ var tid = setInterval(function () {
 
     console.log("Donald Duck initialized.");   
     
+    // replaces all text
     replaceText(document);
+    
+    // replaces all images but only those whose meta matches terms suggesting trump
+    replaceImages(document.body, false);
+
+    // monitors the body for future changes to the tree
     monitorForChanges(document.body);
 }, 100);
