@@ -160,6 +160,7 @@ var drawDuckInImage = function (image) {
         context.drawImage(duckImage, duckX, duckY, duckSize, duckSize);
 
         image.src = canvas.toDataURL();
+        delete canvas;
     }
     duckImage.setAttribute("crossOrigin", "anonymous");
     duckImage.setAttribute("src", chrome.extension.getURL(imageSource));
