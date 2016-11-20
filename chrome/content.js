@@ -1,3 +1,22 @@
+/*
+
+This file is part of DonaldTheDuck Browser Extension.
+
+DonaldTheDuck Browser Extension is free software: you can redistribute it 
+and/or modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation, either version 3 of the License,
+or (at your option) any later version.
+
+DonaldTheDuck Browser Extension is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/licenses/>.
+
+*/
+
 /// Function iterates over all children of node and replaces instances of Trump with Duck
 var replaceText = function (node) {
     if (node.nodeName == "#text") {
@@ -8,6 +27,8 @@ var replaceText = function (node) {
         for (var i = 0; i < node.childNodes.length; i++) {
             replaceText(node.childNodes[i]);
         }
+        // The following would create too many function calls.
+        //
         // node.childNodes.forEach(function (n) {
         //     replaceText(n);
         // });
