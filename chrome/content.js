@@ -20,7 +20,7 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
 /// Function iterates over all children of node and replaces instances of Trump with Duck
 var replaceText = function (node) {
     if (node.nodeName == "#text") {
-        if (node.nodeValue.match(/Trump/)) {
+        while (node.nodeValue.match(/Trump/)) {
             node.nodeValue = node.nodeValue.replace(/(J\.\s+)?Trump/, "Duck");
         }
     } else {
