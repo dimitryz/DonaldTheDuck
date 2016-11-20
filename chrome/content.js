@@ -23,6 +23,9 @@ var BUBBLE_UP_IMAGE_SEARCH = 4;
 /// The attribute assigned to an image to say it was visited by the replaceImage function
 var VISITED_IMAGE_ATTR = "data-donalded";
 
+/// Number of available images in the extension
+var DONALD_IMAGE_COUNT = 7;
+
 /// Function iterates over all children of node and replaces instances of Trump with Duck
 var replaceText = function (node) {
     if (node.nodeName == "#text") {
@@ -82,8 +85,6 @@ var replaceImages = function (node, ignoreMeta) {
         if (image.getAttribute(VISITED_IMAGE_ATTR)) {
             return;
         }
-        
-        image.setAttribute(VISITED_IMAGE_ATTR, "1");
 
         if (image.complete) {
             replaceImage(image);
@@ -92,6 +93,7 @@ var replaceImages = function (node, ignoreMeta) {
                 replaceImage(e.target);
             });
         }
+        
     });
 }
 
@@ -133,14 +135,18 @@ var drawDuckInImage = function (image) {
     var imageWidth  = image.width;
     var imageHeight = image.height;
 
-    if (!imageWidth || !imageHeight) {
+    if (!imageWidth || !imageHeight || image.getAttribute(VISITED_IMAGE_ATTR)) {
         return;
     }
+    image.setAttribute(VISITED_IMAGE_ATTR, "1");
 
     // only works with square images
     var duckSize = imageWidth > imageHeight ? imageHeight : imageWidth;
     var duckX    = (imageWidth - duckSize) / 2;
     var duckY    = (imageHeight - duckSize) / 2; 
+
+    // random image
+    var imageSource = "assets/donald_" + Math.floor(Math.random() * DONALD_IMAGE_COUNT) + ".png";
 
     // loads the data and only then builds the canvas
     var duckImage = new Image();
@@ -156,7 +162,7 @@ var drawDuckInImage = function (image) {
         image.src = canvas.toDataURL();
     }
     duckImage.setAttribute("crossOrigin", "anonymous");
-    duckImage.setAttribute("src", chrome.extension.getURL('assets/icon.png'));
+    duckImage.setAttribute("src", chrome.extension.getURL(imageSource));
 }
 
 /**
