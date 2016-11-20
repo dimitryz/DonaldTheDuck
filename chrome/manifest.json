@@ -23,6 +23,8 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
     "name": "DonaldTheDuck Browser Extension",
     "description": "This extension replaces all mentions and images of Donald Trump with Donald Duck",
     "version": "1.0",
+    "icons": {"400": "assets/icon.png"},
+
     "web_accessible_resources": [
         "assets/donald_0.png",
         "assets/donald_1.png",
