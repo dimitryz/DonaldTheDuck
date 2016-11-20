@@ -130,8 +130,8 @@ var imageResemblesPhoto = function (node) {
  * @param DOMNode image The image node
  */
 var drawDuckInImage = function (image) {
-    var imageWidth  = image.naturalWidth || image.width;
-    var imageHeight = image.naturalHeight || image.height;
+    var imageWidth  = image.width;
+    var imageHeight = image.height;
 
     if (!imageWidth || !imageHeight) {
         return;
