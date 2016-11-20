@@ -18,7 +18,7 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
 */
 
 /// Number of nodes to traverse up the tree to find related images
-var BUBBLE_UP_IMAGE_SEARCH = 3;
+var BUBBLE_UP_IMAGE_SEARCH = 4;
 
 /// The attribute assigned to an image to say it was visited by the replaceImage function
 var VISITED_IMAGE_ATTR = "data-donalded";
@@ -67,7 +67,7 @@ var replaceText = function (node) {
 var replaceImages = function (node, ignoreMeta) {
     var replaceImage = function (image) {
         if ((ignoreMeta && imageResemblesPhoto(image)) || imageContainsTrump(image)) {
-            image.setAttribute("src", "");
+            drawDuckInImage(image);
         }
     }
 
@@ -120,6 +120,43 @@ var imageContainsTrump = function (node) {
  */
 var imageResemblesPhoto = function (node) {
     return node.width && node.height && node.width >= node.height && node.width > 45; 
+}
+
+/**
+ * Renders a new image in the given image node with the face of donald Duck.
+ * 
+ * Curerntly uses the icon.png image for the duck. Only square images allowed.
+ * 
+ * @param DOMNode image The image node
+ */
+var drawDuckInImage = function (image) {
+    var imageWidth  = image.naturalWidth || image.width;
+    var imageHeight = image.naturalHeight || image.height;
+
+    if (!imageWidth || !imageHeight) {
+        return;
+    }
+
+    // only works with square images
+    var duckSize = imageWidth > imageHeight ? imageHeight : imageWidth;
+    var duckX    = (imageWidth - duckSize) / 2;
+    var duckY    = (imageHeight - duckSize) / 2; 
+
+    // loads the data and only then builds the canvas
+    var duckImage = new Image();
+    duckImage.onload = function () {
+        var canvas = document.createElement("canvas");
+        canvas.setAttribute("width", imageWidth);
+        canvas.setAttribute("height", imageHeight);
+
+        context = canvas.getContext("2d");
+        context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+        context.drawImage(duckImage, duckX, duckY, duckSize, duckSize);
+
+        image.src = canvas.toDataURL();
+    }
+    duckImage.setAttribute("crossOrigin", "anonymous");
+    duckImage.setAttribute("src", chrome.extension.getURL('assets/icon.png'));
 }
 
 /**
