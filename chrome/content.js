@@ -69,6 +69,9 @@ var replaceText = function (node) {
  */
 var replaceImages = function (node, ignoreMeta) {
     var replaceImage = function (image) {
+        var image = image.target || image;
+        image.removeEventListener("load", replaceImage);
+
         if ((ignoreMeta && imageResemblesPhoto(image)) || imageContainsTrump(image)) {
             drawDuckInImage(image);
         }
@@ -82,18 +85,11 @@ var replaceImages = function (node, ignoreMeta) {
     }
 
     images.forEach(function (image) {
-        if (image.getAttribute(VISITED_IMAGE_ATTR)) {
-            return;
-        }
-
         if (image.complete) {
             replaceImage(image);
         } else {
-            image.addEventListener("load", function (e) {
-                replaceImage(e.target);
-            });
+            image.addEventListener("load", replaceImage);
         }
-        
     });
 }
 
@@ -135,34 +131,31 @@ var drawDuckInImage = function (image) {
     var imageWidth  = image.width;
     var imageHeight = image.height;
 
-    if (!imageWidth || !imageHeight || image.getAttribute(VISITED_IMAGE_ATTR)) {
+        if (image.getAttribute(VISITED_IMAGE_ATTR)) {
+            return;
+        }
+        image.setAttribute(VISITED_IMAGE_ATTR, "1");
+
+    if (!imageWidth || !imageHeight) {
         return;
     }
-    image.setAttribute(VISITED_IMAGE_ATTR, "1");
 
     // only works with square images
     var duckSize = imageWidth > imageHeight ? imageHeight : imageWidth;
     var duckX    = (imageWidth - duckSize) / 2;
     var duckY    = (imageHeight - duckSize) / 2; 
 
-    // random image
-    var imageSource = "assets/donald_" + Math.floor(Math.random() * DONALD_IMAGE_COUNT) + ".png";
-
     // loads the data and only then builds the canvas
-    var duckImage = new Image();
-    duckImage.onload = function () {
-        var canvas = document.createElement("canvas");
-        canvas.setAttribute("width", imageWidth);
-        canvas.setAttribute("height", imageHeight);
+    var duckImage = imagesOfDonald[Math.floor(Math.random() * imagesOfDonald.length)];
+    var canvas = document.createElement("canvas");
+    canvas.setAttribute("width", imageWidth);
+    canvas.setAttribute("height", imageHeight);
 
-        context = canvas.getContext("2d");
-        context.clearRect(0, 0, context.canvas.width, context.canvas.height);
-        context.drawImage(duckImage, duckX, duckY, duckSize, duckSize);
+    context = canvas.getContext("2d");
+    context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+    context.drawImage(duckImage, duckX, duckY, duckSize, duckSize);
 
-        image.src = canvas.toDataURL();
-    }
-    duckImage.setAttribute("crossOrigin", "anonymous");
-    duckImage.setAttribute("src", chrome.extension.getURL(imageSource));
+    image.src = canvas.toDataURL();
 }
 
 /**
@@ -173,21 +166,35 @@ var drawDuckInImage = function (image) {
  */
 var monitorForChanges = function (node) {
     var observer = new MutationObserver(function(mutations) {
-        for (var i = 0; i < mutations.length; i++) {
-            for (var j = 0; j < mutations[i].addedNodes.length; j++) {
-                replaceText(mutations[i].addedNodes[j]);
-            }
-        }
+        setTimeout(function () {
+            replaceText(node);
+            replaceImages(node);
+        });
     });
     observer.observe(node, { attributes: true, childList: true, characterData: true, subtree: true });
     return observer;
 }
 
-// replaces all text
-replaceText(document);
+/// Loads images of Donald and, once completed, runs the scripts.
 
-// replaces all images but only those whose meta matches terms suggesting trump
-replaceImages(document.body, false);
+var imagesToLoad = 7;
+var imagesOfDonald = [];
+for (var i = 0, c = imagesToLoad; i < c ; i++) {
+    var image = new Image();
+    image.setAttribute("crossOrigin", "anonymous");
+    image.addEventListener("load", function () {
+        imagesToLoad--;
+        if (imagesToLoad == 0) {
+            // replaces all text
+            // replaceText(document);
 
-// monitors the body for future changes to the tree
-monitorForChanges(document.body);
+            // replaces all images but only those whose meta matches terms suggesting trump
+            replaceImages(document.body, false);
+
+            // monitors the body for future changes to the tree
+            monitorForChanges(document.body);
+        }
+    });
+    image.src = chrome.extension.getURL("assets/donald_" + i + ".png");
+    imagesOfDonald.push(image);
+}
