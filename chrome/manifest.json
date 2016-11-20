@@ -1,0 +1,25 @@
+{
+    "manifest_version": 2,
+
+    "name": "Donald Duck",
+    "description": "This extension replaces all mentions and images of Donald Trump with Donald Duck",
+    "version": "1.0",
+
+    "browser_action": {
+        "default_icon": "assets/icon.png",
+        "default_popup": "popup.html"
+    },
+
+    "content_scripts": [
+        {
+            "matches": ["https://*/*", "http://*/*"],
+            "css":     [],
+            "js":      ["content.js"]
+        }
+    ],
+
+    "permissions": [
+        "activeTab",
+        "https://ajax.googleapis.com/"
+    ]
+}
