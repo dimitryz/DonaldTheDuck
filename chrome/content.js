@@ -123,8 +123,6 @@ var imageResemblesPhoto = function (node) {
 /**
  * Renders a new image in the given image node with the face of donald Duck.
  * 
- * Curerntly uses the icon.png image for the duck. Only square images allowed.
- * 
  * @param DOMNode image The image node
  */
 var drawDuckInImage = function (image) {
