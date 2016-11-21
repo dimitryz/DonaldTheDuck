@@ -18,7 +18,7 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
 */
 
 /// Number of nodes to traverse up the tree to find related images
-var BUBBLE_UP_IMAGE_SEARCH = 3;
+var BUBBLE_UP_IMAGE_SEARCH = 5;
 
 /// The attribute assigned to an image to say it was visited by the replaceImage function
 var VISITED_IMAGE_ATTR = "data-donalded";
@@ -37,13 +37,11 @@ var replaceText = function (node) {
         }
 
         if (replaced) {
-            var levelsToGoUp = BUBBLE_UP_IMAGE_SEARCH;
-            var targetNode   = node;
-            while (levelsToGoUp > 0 && targetNode.parentNode && targetNode.parentNode != document) {
-                targetNode = targetNode.parentNode;
-                levelsToGoUp -= 1;
+            // we're dealing with a text node, use the parent node
+            var nearestImage = findNearestPhoto(node.parentNode);
+            if (nearestImage) {
+                replaceImages(nearestImage, true);
             }
-            replaceImages(targetNode, true);
         }
     } else {
         for (var i = 0; i < node.childNodes.length; i++) {
@@ -72,7 +70,7 @@ var replaceImages = function (node, ignoreMeta) {
         var image = image.target || image;
         image.removeEventListener("load", replaceImage);
 
-        if ((ignoreMeta && imageResemblesPhoto(image)) || imageContainsTrump(image)) {
+        if (ignoreMeta || imageContainsTrump(image)) {
             drawDuckInImage(image);
         }
     }
@@ -103,7 +101,7 @@ var imageContainsTrump = function (node) {
     var contains = false;
     var lookThrough = [node.getAttribute("src"), node.getAttribute("alt")];
     for (var i = 0; i < lookThrough.length && !contains; i++) {
-        if (lookThrough[i] && lookThrough[i].match('/Trump|DJT_/')) {
+        if (lookThrough[i] && lookThrough[i].match(/Trump|DJT_/)) {
             contains = true;
         }
     }
@@ -118,6 +116,38 @@ var imageContainsTrump = function (node) {
  */
 var imageResemblesPhoto = function (node) {
     return node.width && node.height && node.width >= node.height && node.width > 45; 
+}
+
+/**
+ * Returns the nearest photo to the node.
+ * 
+ * @param DOMNode node The node to which return the nearest image
+ * @return DOMNode|NULL The image node or null
+ */
+var findNearestPhoto = function (node) {
+    var nearestImage = null;
+    
+    var container = node;
+    var depth = BUBBLE_UP_IMAGE_SEARCH;
+    while (depth > 0 && container.parentNode) {
+        container = container.parentNode;
+        depth--;
+    }
+
+    var $nearestImages = $(node).nearest('img', {container: container, tolerance: 50});
+    if ($nearestImages.length) {
+        var biggestImage = null;
+        for (var i = 0; i < $nearestImages.length; i++) {
+            if (imageResemblesPhoto($nearestImages[i]) &&
+                (!biggestImage ||
+                    ($nearestImages[i].width * $nearestImages[i].height > biggestImage.width * biggestImage.height)))
+            {
+                biggestImage = $nearestImages[i];
+            }
+        }
+        nearestImage = biggestImage;
+    }
+    return nearestImage;
 }
 
 /**
@@ -165,8 +195,8 @@ var drawDuckInImage = function (image) {
 var monitorForChanges = function (node) {
     var observer = new MutationObserver(function(mutations) {
         setTimeout(function () {
-            replaceText(node);
             replaceImages(node);
+            replaceText(node);
         });
     });
     observer.observe(node, { attributes: true, childList: true, characterData: true, subtree: true });
@@ -183,11 +213,11 @@ for (var i = 0, c = imagesToLoad; i < c ; i++) {
     image.addEventListener("load", function () {
         imagesToLoad--;
         if (imagesToLoad == 0) {
-            // replaces all text
-            // replaceText(document);
-
             // replaces all images but only those whose meta matches terms suggesting trump
             replaceImages(document.body, false);
+
+            // replaces all text
+            replaceText(document);
 
             // monitors the body for future changes to the tree
             monitorForChanges(document.body);

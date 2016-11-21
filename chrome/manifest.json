@@ -44,7 +44,7 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
         {
             "matches": ["https://*/*", "http://*/*"],
             "css":     [],
-            "js":      ["content.js"]
+            "js":      ["assets/jquery.min.js", "assets/jquery.nearest.min.js", "content.js"]
         }
     ],
 
