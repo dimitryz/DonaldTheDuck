@@ -256,19 +256,28 @@ var replaceTimeout = null;
 
 var imagesToLoad = 7;
 var imagesOfDonald = [];
-for (var i = 0, c = imagesToLoad; i < c ; i++) {
-    var image = new Image();
-    image.setAttribute("crossOrigin", "anonymous");
-    image.addEventListener("load", function () {
-        imagesToLoad--;
-        if (imagesToLoad == 0) {
-            // replaces all content in the page
-            replaceContent(document.body);
 
-            // monitors the body for future changes to the tree
-            monitorForChanges(document.body);
-        }
-    });
-    image.src = chrome.extension.getURL("assets/donald_" + i + ".png");
-    imagesOfDonald.push(image);
+var init = function () {
+    for (var i = 0, c = imagesToLoad; i < c ; i++) {
+        var image = new Image();
+        image.setAttribute("crossOrigin", "anonymous");
+        image.addEventListener("load", function () {
+            imagesToLoad--;
+            if (imagesToLoad == 0) {
+                // replaces all content in the page
+                replaceContent(document.body);
+
+                // monitors the body for future changes to the tree
+                monitorForChanges(document.body);
+            }
+        });
+        image.src = chrome.extension.getURL("assets/donald_" + i + ".png");
+        imagesOfDonald.push(image);
+    }
 }
+
+chrome.storage.sync.get(["disabledDonaldTheDuck"], function (items) {
+    if (items["disabledDonaldTheDuck"] != "true") {
+        init();
+    }
+});

@@ -50,7 +50,10 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
 
     "permissions": [
         "activeTab",
+        "tabs",
         "storage",
+        "http://*/",
+        "https://*/",
         "https://ajax.googleapis.com/"
     ]
 }
