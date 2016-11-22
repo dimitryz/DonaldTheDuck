@@ -24,24 +24,21 @@ var BUBBLE_UP_IMAGE_SEARCH = 5;
 var VISITED_IMAGE_ATTR = "data-donalded";
 
 /// Number of available images in the extension
-var DONALD_IMAGE_COUNT = 7;
+var DONALD_IMAGE_COUNT = 6;
+
+/// Maximum distance between the text and an image to show association
+var MAX_DISTANCE_ASSOCIATION = 75;
 
 /// Function iterates over all children of node and replaces instances of Trump with Duck
 var replaceText = function (node) {
     if (node.nodeName == "#text") {
         var replaced = false;
-        
         while (node.nodeValue.match(/Trump|-\s*DJT/)) {
             node.nodeValue = node.nodeValue.replace(/(J\.\s+)?Trump/, "Duck").replace(/-\s*DJT/, "- Duck");
             replaced = true;
         }
-
         if (replaced) {
-            // we're dealing with a text node, use the parent node
-            var nearestImage = findNearestPhoto(node.parentNode);
-            if (nearestImage) {
-                replaceImages(nearestImage, true);
-            }
+            replaceImages(findNearestImages(closestBlockNode(node)), true);
         }
     } else {
         for (var i = 0; i < node.childNodes.length; i++) {
@@ -62,10 +59,22 @@ var replaceText = function (node) {
  * Otherwise, the script will only replace images that include the words Trump,
  * J. Trump or DJT_ in either the source or alt attributes.
  * 
- * @param DOMNode node The node at which to start the search
+ * @param DOMNode|Array node The node at which to start the search or a list of nodes
  * @param boolean ignoreMeta Will not search through the meta for terms related to Trump
  */
 var replaceImages = function (node, ignoreMeta) {
+    var images;
+    if (typeof node.forEach != 'undefined') {
+        images = node;
+    } else if (node.nodeName == "IMG") {
+        images = [node];
+    } else {
+        images = nodeCollectionToArray(node.getElementsByTagName("img"));
+    }
+    if (images.length < 1) {
+        return;
+    }
+
     var replaceImage = function (image) {
         var image = image.target || image;
         image.removeEventListener("load", replaceImage);
@@ -73,13 +82,6 @@ var replaceImages = function (node, ignoreMeta) {
         if (ignoreMeta || imageContainsTrump(image)) {
             drawDuckInImage(image);
         }
-    }
-
-    var images;
-    if (node.nodeName == "IMG") {
-        images = [node];
-    } else {
-        images = Array.prototype.slice.call(node.getElementsByTagName("img"));
     }
 
     images.forEach(function (image) {
@@ -92,6 +94,30 @@ var replaceImages = function (node, ignoreMeta) {
 }
 
 /**
+ * Returns an array from a list of nodes
+ * 
+ * @param Node collection
+ * @return Array
+ */
+var nodeCollectionToArray = function (nodeCollection) {
+    return Array.prototype.slice.call(nodeCollection);
+}
+
+/**
+ * Returns the closest block node to the given element
+ * 
+ * @param DOMNode node The node for which to find the closest parent that is a block
+ * @return DOMNode The closest parent block node
+ */
+var closestBlockNode = function (node) {
+    var parent = node;
+    while (parent.parentNode && (parent.nodeType != 1 || window.getComputedStyle(parent).display == 'inline')) {
+        parent = parent.parentNode;
+    }
+    return parent;
+}
+
+/**
  * Returns true if the image appears to be of Trump.
  * 
  * @param DOMNode node An image node
@@ -99,7 +125,11 @@ var replaceImages = function (node, ignoreMeta) {
  */
 var imageContainsTrump = function (node) {
     var contains = false;
-    var lookThrough = [node.getAttribute("src"), node.getAttribute("alt")];
+    var src = node.getAttribute("src") || "";
+
+    // limits the size of the source so that we're not searching throught
+    var lookThrough = [src.indexOf('data:image') === 0 ? "" : src, node.getAttribute("alt")];
+    
     for (var i = 0; i < lookThrough.length && !contains; i++) {
         if (lookThrough[i] && lookThrough[i].match(/Trump|DJT_/)) {
             contains = true;
@@ -115,7 +145,18 @@ var imageContainsTrump = function (node) {
  * @return boolean True if the image is a photo
  */
 var imageResemblesPhoto = function (node) {
-    return node.width && node.height && node.width >= node.height && node.width > 45; 
+    return node.width && node.height && node.width >= node.height && node.width > 40; 
+}
+
+/**
+ * Returns the distance between two elements.
+ * 
+ * @param DOMNode firstNode First node
+ * @param DOMNode secondNode Second node
+ * @return Float The distance
+ */
+var distanceBetweenNodes = function (firstNode, secondNode) {
+    return mezr.distance(firstNode, secondNode);
 }
 
 /**
@@ -124,7 +165,7 @@ var imageResemblesPhoto = function (node) {
  * @param DOMNode node The node to which return the nearest image
  * @return DOMNode|NULL The image node or null
  */
-var findNearestPhoto = function (node) {
+var findNearestImages = function (node) {
     var nearestImage = null;
     
     var container = node;
@@ -134,20 +175,15 @@ var findNearestPhoto = function (node) {
         depth--;
     }
 
-    var $nearestImages = $(node).nearest('img', {container: container, tolerance: 50});
-    if ($nearestImages.length) {
-        var biggestImage = null;
-        for (var i = 0; i < $nearestImages.length; i++) {
-            if (imageResemblesPhoto($nearestImages[i]) &&
-                (!biggestImage ||
-                    ($nearestImages[i].width * $nearestImages[i].height > biggestImage.width * biggestImage.height)))
-            {
-                biggestImage = $nearestImages[i];
-            }
+    var images = nodeCollectionToArray(container.getElementsByTagName('img'));
+    var toReplace = [];
+    images.forEach(function (image) {
+        if (imageResemblesPhoto(image) && distanceBetweenNodes(node, image) <= MAX_DISTANCE_ASSOCIATION) {
+            toReplace.push(image);
         }
-        nearestImage = biggestImage;
-    }
-    return nearestImage;
+    });
+
+    return toReplace;
 }
 
 /**
@@ -159,10 +195,10 @@ var drawDuckInImage = function (image) {
     var imageWidth  = image.width;
     var imageHeight = image.height;
 
-        if (image.getAttribute(VISITED_IMAGE_ATTR)) {
-            return;
-        }
-        image.setAttribute(VISITED_IMAGE_ATTR, "1");
+    if (image.getAttribute(VISITED_IMAGE_ATTR)) {
+        return;
+    }
+    image.setAttribute(VISITED_IMAGE_ATTR, "1");
 
     if (!imageWidth || !imageHeight) {
         return;
@@ -194,14 +230,27 @@ var drawDuckInImage = function (image) {
  */
 var monitorForChanges = function (node) {
     var observer = new MutationObserver(function(mutations) {
-        setTimeout(function () {
-            replaceImages(node);
-            replaceText(node);
-        });
+        replaceContent(node);
     });
     observer.observe(node, { attributes: true, childList: true, characterData: true, subtree: true });
     return observer;
 }
+
+/**
+ * Parses the content one more time
+ * 
+ */
+var replaceContent = function (root) {
+    if (replaceTimeout) {
+        return;
+    }
+    replaceTimeout = setTimeout(function () {
+        replaceImages(root, false);
+        replaceText(root);
+        replaceTimeout = false;
+    }, 300);
+}
+var replaceTimeout = null;
 
 /// Loads images of Donald and, once completed, runs the scripts.
 
@@ -213,11 +262,8 @@ for (var i = 0, c = imagesToLoad; i < c ; i++) {
     image.addEventListener("load", function () {
         imagesToLoad--;
         if (imagesToLoad == 0) {
-            // replaces all images but only those whose meta matches terms suggesting trump
-            replaceImages(document.body, false);
-
-            // replaces all text
-            replaceText(document);
+            // replaces all content in the page
+            replaceContent(document.body);
 
             // monitors the body for future changes to the tree
             monitorForChanges(document.body);
