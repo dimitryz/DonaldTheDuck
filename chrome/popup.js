@@ -1,9 +1,10 @@
-var localStorageKey = "disabledDonaldTheDuck";
 
+/// Returns the checkbox for toggling enabled/disabled
 var getInput = function () {
     return document.getElementById('iDisabled');
 }
 
+/// Toggle the input
 var toggleDisabled = function (disabled) {
     if (disabled) {
         getInput().checked = "checked";
@@ -12,14 +13,15 @@ var toggleDisabled = function (disabled) {
     }
 }
 
+/// Called when document has loaded
 document.addEventListener("DOMContentLoaded", function () {
-    chrome.storage.sync.get([localStorageKey], function (items) {
-        toggleDisabled(items[localStorageKey] == "true");
+    chrome.storage.sync.get([LocalStorageDisabledKey], function (items) {
+        toggleDisabled(items[LocalStorageDisabledKey] == "true");
     });
     
     getInput().addEventListener("change", function (e) {
         var data = {};
-        data[localStorageKey] = e.target.checked ? "true" : false;
+        data[LocalStorageDisabledKey] = e.target.checked ? "true" : false;
         chrome.storage.sync.set(data);
        
         toggleDisabled(e.target.checked);

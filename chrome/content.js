@@ -27,17 +27,68 @@ var VISITED_IMAGE_ATTR = "data-donalded";
 var DONALD_IMAGE_COUNT = 6;
 
 /// Maximum distance between the text and an image to show association
-var MAX_DISTANCE_ASSOCIATION = 75;
+var MAX_DISTANCE_ASSOCIATION = 50;
 
-/// Function iterates over all children of node and replaces instances of Trump with Duck
+/// Number of images in the assets with Donald 
+var IMAGES_TO_LOAD_COUNT = 7;
+
+/// List of loaded images of Donald
+var IMAGES_OF_DONALD = [];
+
+/// Main function for initializing the functionality
+var init = function () {
+    var remainingImagestoLoad = IMAGES_TO_LOAD_COUNT;
+    for (var i = 0, c = IMAGES_TO_LOAD_COUNT; i < c ; i++) {
+        var image = new Image();
+        image.setAttribute("crossOrigin", "anonymous");
+        image.addEventListener("load", function () {
+            remainingImagestoLoad--;
+            if (remainingImagestoLoad == 0) {
+                // replaces all content in the page
+                replaceContent(document.body);
+
+                // monitors the body for future changes to the tree
+                monitorForChanges(document.body);
+            }
+        });
+        image.src = chrome.extension.getURL("assets/donald_" + i + ".png");
+        IMAGES_OF_DONALD.push(image);
+    }
+}
+
+/**
+ * Replaces all mention of DJT with DTD
+ * 
+ * @param DOMNode root The root node
+ */
+var replaceContent = function (root) {
+    if (replaceTimeout) {
+        return;
+    }
+    replaceTimeout = setTimeout(function () {
+        replaceImages(root, false);
+        replaceText(root);
+        replaceTimeout = false;
+    }, 300);
+}
+var replaceTimeout = null;
+
+/**
+ * Function iterates over all children of node and replaces the text.
+ * 
+ * Replaces all images surrounding the text too.
+ * 
+ * @param DOMNode node The root node at which to replace the text.
+ */
 var replaceText = function (node) {
-    if (node.nodeName == "#text") {
+    if (node.nodeType == 3) {
         var replaced = false;
-        while (node.nodeValue.match(/Trump|-\s*DJT/)) {
-            node.nodeValue = node.nodeValue.replace(/(J\.\s+)?Trump/, "Duck").replace(/-\s*DJT/, "- Duck");
+        while (node.nodeValue.match(/Trump|TRUMP|-\s*DJT/)) {
+            node.nodeValue = node.nodeValue.replace(/(J\.\s+)?(Trump|TRUMP)/, "Duck").replace(/-\s*DJT/, "- Duck");
             replaced = true;
         }
         if (replaced) {
+            console.log(["Dealing with block", node.cloneNode(false)]);
             replaceImages(findNearestImages(closestBlockNode(node)), true);
         }
     } else {
@@ -63,7 +114,7 @@ var replaceText = function (node) {
  * @param boolean ignoreMeta Will not search through the meta for terms related to Trump
  */
 var replaceImages = function (node, ignoreMeta) {
-    var images;
+    var images = [];
     if (typeof node.forEach != 'undefined') {
         images = node;
     } else if (node.nodeName == "IMG") {
@@ -71,50 +122,35 @@ var replaceImages = function (node, ignoreMeta) {
     } else {
         images = nodeCollectionToArray(node.getElementsByTagName("img"));
     }
-    if (images.length < 1) {
+
+    var imagesToReplace = [];
+    images.forEach(function (image) {
+        if (ignoreMeta) {
+            console.log(["Image added by proximity", image.cloneNode(false)]);
+        } else if (imageContainsTrump(image)) {
+            console.log(["Image added because of content/meta", image.cloneNode(false)]);
+        }
+        if (ignoreMeta || imageContainsTrump(image)) {
+            imagesToReplace.push(image);
+        }
+    });
+    if (imagesToReplace.length < 1) {
         return;
     }
 
     var replaceImage = function (image) {
         var image = image.target || image;
         image.removeEventListener("load", replaceImage);
-
-        if (ignoreMeta || imageContainsTrump(image)) {
-            drawDuckInImage(image);
-        }
+        drawDuckInImage(image);
     }
 
-    images.forEach(function (image) {
+    imagesToReplace.forEach(function (image) {
         if (image.complete) {
             replaceImage(image);
         } else {
             image.addEventListener("load", replaceImage);
         }
     });
-}
-
-/**
- * Returns an array from a list of nodes
- * 
- * @param Node collection
- * @return Array
- */
-var nodeCollectionToArray = function (nodeCollection) {
-    return Array.prototype.slice.call(nodeCollection);
-}
-
-/**
- * Returns the closest block node to the given element
- * 
- * @param DOMNode node The node for which to find the closest parent that is a block
- * @return DOMNode The closest parent block node
- */
-var closestBlockNode = function (node) {
-    var parent = node;
-    while (parent.parentNode && (parent.nodeType != 1 || window.getComputedStyle(parent).display == 'inline')) {
-        parent = parent.parentNode;
-    }
-    return parent;
 }
 
 /**
@@ -131,32 +167,11 @@ var imageContainsTrump = function (node) {
     var lookThrough = [src.indexOf('data:image') === 0 ? "" : src, node.getAttribute("alt")];
     
     for (var i = 0; i < lookThrough.length && !contains; i++) {
-        if (lookThrough[i] && lookThrough[i].match(/Trump|DJT_/)) {
+        if (lookThrough[i] && lookThrough[i].match(/Trump|TRUMP|DJT_/)) {
             contains = true;
         }
     }
     return contains;
-}
-
-/**
- * Returns true if the given image matches the size of a photo.
- * 
- * @param DOMNode node Checks that the image is of a certain size
- * @return boolean True if the image is a photo
- */
-var imageResemblesPhoto = function (node) {
-    return node.width && node.height && node.width >= node.height && node.width > 40; 
-}
-
-/**
- * Returns the distance between two elements.
- * 
- * @param DOMNode firstNode First node
- * @param DOMNode secondNode Second node
- * @return Float The distance
- */
-var distanceBetweenNodes = function (firstNode, secondNode) {
-    return mezr.distance(firstNode, secondNode);
 }
 
 /**
@@ -168,9 +183,10 @@ var distanceBetweenNodes = function (firstNode, secondNode) {
 var findNearestImages = function (node) {
     var nearestImage = null;
     
+    // finds the top-most block container from which to start searching for an image
     var container = node;
     var depth = BUBBLE_UP_IMAGE_SEARCH;
-    while (depth > 0 && container.parentNode) {
+    while (depth > 0 && container.parentNode && container.parentNode != document.body) {
         container = container.parentNode;
         depth--;
     }
@@ -210,7 +226,7 @@ var drawDuckInImage = function (image) {
     var duckY    = (imageHeight - duckSize) / 2; 
 
     // loads the data and only then builds the canvas
-    var duckImage = imagesOfDonald[Math.floor(Math.random() * imagesOfDonald.length)];
+    var duckImage = IMAGES_OF_DONALD[Math.floor(Math.random() * IMAGES_OF_DONALD.length)];
     var canvas = document.createElement("canvas");
     canvas.setAttribute("width", imageWidth);
     canvas.setAttribute("height", imageHeight);
@@ -236,48 +252,10 @@ var monitorForChanges = function (node) {
     return observer;
 }
 
-/**
- * Parses the content one more time
- * 
- */
-var replaceContent = function (root) {
-    if (replaceTimeout) {
-        return;
-    }
-    replaceTimeout = setTimeout(function () {
-        replaceImages(root, false);
-        replaceText(root);
-        replaceTimeout = false;
-    }, 300);
-}
-var replaceTimeout = null;
+// Initializes the scripts
 
-/// Loads images of Donald and, once completed, runs the scripts.
-
-var imagesToLoad = 7;
-var imagesOfDonald = [];
-
-var init = function () {
-    for (var i = 0, c = imagesToLoad; i < c ; i++) {
-        var image = new Image();
-        image.setAttribute("crossOrigin", "anonymous");
-        image.addEventListener("load", function () {
-            imagesToLoad--;
-            if (imagesToLoad == 0) {
-                // replaces all content in the page
-                replaceContent(document.body);
-
-                // monitors the body for future changes to the tree
-                monitorForChanges(document.body);
-            }
-        });
-        image.src = chrome.extension.getURL("assets/donald_" + i + ".png");
-        imagesOfDonald.push(image);
-    }
-}
-
-chrome.storage.sync.get(["disabledDonaldTheDuck"], function (items) {
-    if (items["disabledDonaldTheDuck"] != "true") {
+chrome.storage.sync.get([LocalStorageDisabledKey], function (items) {
+    if (items[LocalStorageDisabledKey] != "true") {
         init();
     }
 });

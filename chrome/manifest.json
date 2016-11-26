@@ -44,7 +44,7 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
         {
             "matches": ["https://*/*", "http://*/*"],
             "css":     [],
-            "js":      ["assets/mezr.min.js", "content.js"]
+            "js":      ["assets/mezr.min.js", "includes/constants.js", "includes/utils.js", "content.js"]
         }
     ],
 
