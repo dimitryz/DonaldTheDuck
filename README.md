@@ -7,12 +7,15 @@ FAQ
 ===
 
 *Why should I install this?*
+
 Because you are tired of the onslaught of news regarding the future president of the US.
 
 *How does it work?*
+
 This plugin will replace all images that mention Trump with images of Donald Duck, and all mentions of the name Trump will be replaced with the word Duck. In addition, any image surrounding the name Trump will be replaced with a picture of the duck.
 
 *Is this a political statement?*
+
 Absolutely not. This is just for fun.
 
 Copyright
