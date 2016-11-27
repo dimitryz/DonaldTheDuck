@@ -26,13 +26,7 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
     "icons": {"400": "assets/icon.png"},
 
     "web_accessible_resources": [
-        "assets/donald_0.png",
-        "assets/donald_1.png",
-        "assets/donald_2.png",
-        "assets/donald_3.png",
-        "assets/donald_4.png",
-        "assets/donald_5.png",
-        "assets/donald_6.png"
+        "assets/*"
     ],
 
     "browser_action": {

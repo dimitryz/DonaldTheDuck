@@ -32,13 +32,19 @@ var MAX_DISTANCE_ASSOCIATION = 50;
 /// Number of images in the assets with Donald 
 var IMAGES_TO_LOAD_COUNT = 7;
 
+/// Width of a small image
+var SMALL_IMAGE_SIZE = 120;
+
 /// List of loaded images of Donald
 var IMAGES_OF_DONALD = [];
 
+/// Small images of Donald. 120 x 120
+var SMALL_IMAGES_OF_DONALD = [];
+
 /// Main function for initializing the functionality
 var init = function () {
-    var remainingImagestoLoad = IMAGES_TO_LOAD_COUNT;
-    for (var i = 0, c = IMAGES_TO_LOAD_COUNT; i < c ; i++) {
+    var remainingImagestoLoad = IMAGES_TO_LOAD_COUNT * 2;
+    for (var i = 0, c = IMAGES_TO_LOAD_COUNT * 2; i < c ; i++) {
         var image = new Image();
         image.setAttribute("crossOrigin", "anonymous");
         image.addEventListener("load", function () {
@@ -51,8 +57,14 @@ var init = function () {
                 monitorForChanges(document.body);
             }
         });
-        image.src = chrome.extension.getURL("assets/donald_" + i + ".png");
-        IMAGES_OF_DONALD.push(image);
+
+        if (i % 2 == 0) {
+            image.src = chrome.extension.getURL("assets/donald_" + i / 2 + ".png");
+            IMAGES_OF_DONALD.push(image);
+        } else {
+            image.src = chrome.extension.getURL("assets/donald_" + (i - 1) / 2 + "_small.png");
+            SMALL_IMAGES_OF_DONALD.push(image);
+        }
     }
 }
 
@@ -226,14 +238,19 @@ var drawDuckInImage = function (image) {
     var duckY    = (imageHeight - duckSize) / 2; 
 
     // loads the data and only then builds the canvas
-    var duckImage = IMAGES_OF_DONALD[Math.floor(Math.random() * IMAGES_OF_DONALD.length)];
+    var duckImage;
+    if (duckSize <= SMALL_IMAGE_SIZE) {
+        duckImage = SMALL_IMAGES_OF_DONALD[Math.floor(Math.random() * SMALL_IMAGES_OF_DONALD.length)];
+    } else {
+        duckImage = IMAGES_OF_DONALD[Math.floor(Math.random() * IMAGES_OF_DONALD.length)];
+    }
     var canvas = document.createElement("canvas");
-    canvas.setAttribute("width", imageWidth);
-    canvas.setAttribute("height", imageHeight);
+    canvas.setAttribute("width", imageWidth * 2);
+    canvas.setAttribute("height", imageHeight * 2);
 
     context = canvas.getContext("2d");
     context.clearRect(0, 0, context.canvas.width, context.canvas.height);
-    context.drawImage(duckImage, duckX, duckY, duckSize, duckSize);
+    context.drawImage(duckImage, duckX, duckY, duckSize * 2, duckSize * 2);
 
     image.src = canvas.toDataURL();
 }
