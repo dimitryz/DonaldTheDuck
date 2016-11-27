@@ -21,7 +21,10 @@ along with DonaldTheDuck Browser Extension.  If not, see <http://www.gnu.org/lic
 var BUBBLE_UP_IMAGE_SEARCH = 5;
 
 /// The attribute assigned to an image to say it was visited by the replaceImage function
-var VISITED_IMAGE_ATTR = "data-donalded";
+var VISITED_IMAGE_ATTR = "data-donald-visited";
+
+/// Attribute indicates that the image has already been replaced
+var REPLACED_IMAGE_ATTR = "data-donalded";
 
 /// Number of available images in the extension
 var DONALD_IMAGE_COUNT = 6;
@@ -100,18 +103,13 @@ var replaceText = function (node) {
             replaced = true;
         }
         if (replaced) {
-            console.log(["Dealing with block", node.cloneNode(false)]);
             replaceImages(findNearestImages(closestBlockNode(node)), true);
         }
     } else {
         for (var i = 0; i < node.childNodes.length; i++) {
+            // does not use forEach because it would create too many function calls
             replaceText(node.childNodes[i]);
         }
-        // The following would create too many function calls.
-        //
-        // node.childNodes.forEach(function (n) {
-        //     replaceText(n);
-        // });
     }
 }
 
@@ -137,14 +135,10 @@ var replaceImages = function (node, ignoreMeta) {
 
     var imagesToReplace = [];
     images.forEach(function (image) {
-        if (ignoreMeta) {
-            console.log(["Image added by proximity", image.cloneNode(false)]);
-        } else if (imageContainsTrump(image)) {
-            console.log(["Image added because of content/meta", image.cloneNode(false)]);
-        }
-        if (ignoreMeta || imageContainsTrump(image)) {
+        if (ignoreMeta || (!image.getAttribute(VISITED_IMAGE_ATTR) && imageContainsTrump(image))) {
             imagesToReplace.push(image);
         }
+        image.setAttribute(VISITED_IMAGE_ATTR, '1');
     });
     if (imagesToReplace.length < 1) {
         return;
@@ -153,15 +147,13 @@ var replaceImages = function (node, ignoreMeta) {
     var replaceImage = function (image) {
         var image = image.target || image;
         image.removeEventListener("load", replaceImage);
+        console.log("Here");
+
         drawDuckInImage(image);
     }
 
     imagesToReplace.forEach(function (image) {
-        if (image.complete) {
-            replaceImage(image);
-        } else {
-            image.addEventListener("load", replaceImage);
-        }
+        replaceImage(image);
     });
 }
 
@@ -176,7 +168,7 @@ var imageContainsTrump = function (node) {
     var src = node.getAttribute("src") || "";
 
     // limits the size of the source so that we're not searching throught
-    var lookThrough = [src.indexOf('data:image') === 0 ? "" : src, node.getAttribute("alt")];
+    var lookThrough = [src.substring(0, 10) === 'data:image' ? "" : src, node.getAttribute("alt")];
     
     for (var i = 0; i < lookThrough.length && !contains; i++) {
         if (lookThrough[i] && lookThrough[i].match(/Trump|TRUMP|DJT_/)) {
@@ -223,10 +215,10 @@ var drawDuckInImage = function (image) {
     var imageWidth  = image.width;
     var imageHeight = image.height;
 
-    if (image.getAttribute(VISITED_IMAGE_ATTR)) {
+    if (image.getAttribute(REPLACED_IMAGE_ATTR)) {
         return;
     }
-    image.setAttribute(VISITED_IMAGE_ATTR, "1");
+    image.setAttribute(REPLACED_IMAGE_ATTR, "1");
 
     if (!imageWidth || !imageHeight) {
         return;
@@ -263,6 +255,25 @@ var drawDuckInImage = function (image) {
  */
 var monitorForChanges = function (node) {
     var observer = new MutationObserver(function(mutations) {
+        // Removes the VISITED_IMAGE_ATTR from images that have changed
+        for (var i = 0; i < mutations.length; i++) {
+            var target = mutations[i].target;
+            var images = null;
+            if (target.tagName == "IMG") {
+                images = [target];
+            } else if (target.getElementsByTagName) {
+                images = nodeCollectionToArray(target.getElementsByTagName("IMG"));
+            }
+            if (images && images.length) {
+                for (var j = 0; j < images.length; j++) {
+                    var image = images[j];
+                    if (!image.getAttribute(REPLACED_IMAGE_ATTR) && image.getAttribute(VISITED_IMAGE_ATTR)) {
+                        image.removeAttribute(VISITED_IMAGE_ATTR);
+                    }
+                }
+            }
+        }
+
         replaceContent(node);
     });
     observer.observe(node, { attributes: true, childList: true, characterData: true, subtree: true });
