@@ -147,8 +147,6 @@ var replaceImages = function (node, ignoreMeta) {
     var replaceImage = function (image) {
         var image = image.target || image;
         image.removeEventListener("load", replaceImage);
-        console.log("Here");
-
         drawDuckInImage(image);
     }
 
